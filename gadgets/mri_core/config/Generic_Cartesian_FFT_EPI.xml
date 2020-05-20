@@ -25,7 +25,15 @@
     <!-- Noise prewhitening -->
     <gadget><name>NoiseAdjust</name><dll>gadgetron_mricore</dll><classname>NoiseAdjustGadget</classname></gadget>
 
-     <!-- EPI correction -->
+    <gadget>
+        <name>GiveReadoutInformationGadget</name>
+        <dll>gadgetron_smscore</dll>
+        <classname>GiveReadoutInformationGadget</classname>
+    </gadget>
+
+
+
+   <!-- EPI correction -->
     <gadget>
         <name>ReconX</name>
         <dll>gadgetron_epi</dll>
@@ -49,6 +57,8 @@
         <dll>gadgetron_epi</dll>
         <classname>OneEncodingGadget</classname>
     </gadget>
+
+
 
     <!-- Data accumulation and trigger gadget -->
     <gadget>

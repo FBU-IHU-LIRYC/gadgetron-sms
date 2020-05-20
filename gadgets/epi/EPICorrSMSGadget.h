@@ -125,7 +125,7 @@ protected:
                           float intercept);
 
     void apply_epi_correction(ISMRMRD::AcquisitionHeader &hdr, arma::cx_fmat &adata);
-
+    
 
     /////////////////
     /// \brief detect_flag
@@ -134,6 +134,8 @@ protected:
 
     void detect_flag(GadgetContainerMessage<ISMRMRD::AcquisitionHeader> *m1);
 
+    int copy_and_send_data(int currentDataType, int slice, arma::cx_fvec data);
+    void send_data_to_next_function(int slice);
     void fonction_qui_sauvegarde_sur_le_disk_les_corrections_par_coupes(int slice );
 
     std::vector<size_t> dimensions_;

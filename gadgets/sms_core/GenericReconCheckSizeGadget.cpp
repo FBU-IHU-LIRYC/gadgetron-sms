@@ -49,8 +49,18 @@ namespace Gadgetron {
 
                 hoNDArray< std::complex<float> >& data = recon_bit_->rbit_[e].ref_->data_;
                 hoNDArray< ISMRMRD::AcquisitionHeader > headers_ = recon_bit_->rbit_[e].ref_->headers_;
-                ISMRMRD::AcquisitionHeader & curr_header = headers_(0, 0, 0, 0, 0);
-                std::cout << " repetition" << curr_header.idx.repetition << std::endl;
+
+                unsigned int rep_max =0;
+
+                for (int ii=0; ii<headers_.get_number_of_elements(); ii++)
+                {
+                    if( headers_(ii).idx.repetition>0 )
+                    {
+                        rep_max=headers_(ii).idx.repetition;
+                        //GERROR_STREAM("After checking, it is not the first repetition,  "<< );
+                        //return GADGET_FAIL;
+                    }
+                }
 
                 size_t RO = data.get_size(0);
                 size_t E1 = data.get_size(1);
@@ -60,31 +70,9 @@ namespace Gadgetron {
                 size_t S = data.get_size(5);
                 size_t SLC = data.get_size(6);
 
-                GDEBUG_STREAM("GenericCheckSizeGadget - incoming data array ref : [RO E1 E2 CHA N S SLC] - [" << RO << " " << E1 << " " << E2 << " " << CHA << " " << N << " " << S << " " << SLC << "]");
+                GDEBUG_STREAM("GenericReconCheckSizeGadget - incoming data array ref : [RO E1 E2 CHA N S SLC] - [" << RO << " " << E1 << " " << E2 << " " << CHA << " " << N << " " << S << " " << SLC << "]");
             }
 
-            /*if (recon_bit_->rbit_[e].sb_)
-            {
-               // std::cout << " je suis la structure qui contient les données single band" << std::endl;
-
-                hoNDArray< std::complex<float> >& data = recon_bit_->rbit_[e].sb_->data_;
-                hoNDArray< ISMRMRD::AcquisitionHeader > headers_ = recon_bit_->rbit_[e].sb_->headers_;
-                ISMRMRD::AcquisitionHeader & curr_header = headers_(0, 0, 0, 0, 0);
-                std::cout << " repetition" << curr_header.idx.repetition << std::endl;
-
-
-                size_t RO = data.get_size(0);
-                size_t E1 = data.get_size(1);
-                size_t E2 = data.get_size(2);
-                size_t CHA = data.get_size(3);
-                size_t N = data.get_size(4);
-                size_t S = data.get_size(5);
-                size_t SLC = data.get_size(6);
-                size_t MB = data.get_size(7);
-
-                GDEBUG_STREAM("GenericCheckSizeGadget - incoming data array sb : [RO E1 E2 CHA N S SLC X ] - [" << RO << " " << E1 << " " << E2 << " " << CHA << " " << N << " " << S << " " << SLC<< " " << MB << "]");
-
-            }*/
 
             if (recon_bit_->rbit_[e].data_.data_.get_number_of_elements() > 0)
             {
@@ -92,8 +80,20 @@ namespace Gadgetron {
 
                 hoNDArray< std::complex<float> >& data = recon_bit_->rbit_[e].data_.data_;
                 hoNDArray< ISMRMRD::AcquisitionHeader > headers_ = recon_bit_->rbit_[e].data_.headers_;
-                ISMRMRD::AcquisitionHeader & curr_header = headers_(0, 0, 0, 0, 0);
-                std::cout << " repetition" << curr_header.idx.repetition << std::endl;
+                unsigned int rep_max=0;
+
+                for (int ii=0; ii<headers_.get_number_of_elements(); ii++)
+                {
+                    if( headers_(ii).idx.repetition>0 )
+                    {
+                        rep_max=headers_(ii).idx.repetition;
+                        //GERROR_STREAM("After checking, it is not the first repetition,  "<< );
+                        //return GADGET_FAIL;
+                    }
+                }
+
+                std::cout << " repetition " << rep_max << std::endl;
+
 
                 size_t RO = data.get_size(0);
                 size_t E1 = data.get_size(1);
@@ -103,7 +103,7 @@ namespace Gadgetron {
                 size_t S = data.get_size(5);
                 size_t SLC = data.get_size(6);
 
-                GDEBUG_STREAM("GenericCheckSizeGadget - incoming data array data: [RO E1 E2 CHA N S SLC] - [" << RO << " " << E1 << " " << E2 << " " << CHA << " " << N << " " << S << " " << SLC << "]");
+                GDEBUG_STREAM("GenericReconCheckSizeGadget - incoming data array data: [RO E1 E2 CHA N S SLC] - [" << RO << " " << E1 << " " << E2 << " " << CHA << " " << N << " " << S << " " << SLC << "]");
 
 
             }

@@ -299,6 +299,7 @@
 </gadget>
 
 <!-- after recon processing -->
+<!--
 <gadget>
       <name>ExtractThermoI</name>
       <dll>gadgetron_mricore</dll>
@@ -311,7 +312,13 @@
           <name>extract_mask</name>
           <value>9</value>
       </property>
-</gadget>
+</gadget>-->
+
+  <gadget>
+        <name>ComplexToFloatAttrib</name>
+        <dll>gadgetron_mricore</dll>
+        <classname>ComplexToFloatGadget</classname>
+    </gadget>
 
   <gadget>
       <name>FloatToShortAttrib</name>

@@ -7,7 +7,7 @@
 #pragma once
 
 #include "GenericReconBase.h"
-
+#include "gadgetron_smscore_export.h"
 #include "hoNDArray_utils.h"
 #include "hoNDArray_elemwise.h"
 #include "hoNDKLT.h"

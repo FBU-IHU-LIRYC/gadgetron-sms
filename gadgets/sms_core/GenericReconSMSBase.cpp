@@ -195,9 +195,17 @@ int GenericReconSMSBase::process_config(ACE_Message_Block* mb)
     //std::cout <<  order_of_acquisition_mb << std::endl;
     //std::cout <<  order_of_acquisition_sb << std::endl;
 
-    indice_mb =  arma::sort_index( order_of_acquisition_mb );
-    indice_sb =  arma::sort_index( order_of_acquisition_sb );
-    indice_slice_mb=indice_sb.rows(0,lNumberOfStacks_-1);
+    // indice_mb =  arma::sort_index( order_of_acquisition_mb );
+    // indice_sb =  arma::sort_index( order_of_acquisition_sb );
+    // indice_slice_mb=indice_sb.rows(0,lNumberOfStacks_-1);
+    indice_mb = sort_index(order_of_acquisition_mb);
+    indice_sb = sort_index(order_of_acquisition_sb);
+
+    for (unsigned int i = 0; i < lNumberOfStacks_; i++)
+    {
+        indice_slice_mb.push_back(indice_sb[i]);
+    }
+
 
     // std::cout <<  indice_mb << std::endl;
     // std::cout <<  indice_sb << std::endl;
@@ -210,7 +218,7 @@ int GenericReconSMSBase::process_config(ACE_Message_Block* mb)
     // }
 
 
-    //arma::uvec plot_mb= arma::sort( indice_sb );
+    //std::vector<unsigned int> plot_mb= arma::sort( indice_sb );
     // std::cout << plot_mb << std::endl;  ;
     //for (unsigned int i = 0; i < lNumberOfStacks_; i++)
     //{
@@ -220,13 +228,33 @@ int GenericReconSMSBase::process_config(ACE_Message_Block* mb)
 
 
     MapSliceSMS=get_map_slice_single_band( MB_factor,  lNumberOfStacks_,  order_of_acquisition_mb,  no_reordering);
-    std::cout <<  MapSliceSMS<< std::endl;
+    //std::cout <<  MapSliceSMS<< std::endl;
 
     center_k_space_xml=h.encoding[0].encodingLimits.kspace_encoding_step_1->center+1;
 
     slice_thickness=h.encoding[0].encodedSpace.fieldOfView_mm.z;
 
     return GADGET_OK;
+}
+
+std::vector<unsigned int> GenericReconSMSBase::sort_index(std::vector<unsigned int> array)
+{
+    std::vector<unsigned int>sortedArray(array);
+    
+    std::sort(sortedArray.begin(), sortedArray.end());
+    //quicksort(sortedArray, 0, arraySize - 1);
+    for (int i = 0; i < (array.size()); i++)
+    {
+        for (int j = 0; j < (array.size()); j++)
+        {
+            if (sortedArray[i] == array[j])
+            {
+                sortedArray[i] = j;
+                break;
+            }
+        }
+    }
+    return (sortedArray);
 }
 
 int GenericReconSMSBase::process(Gadgetron::GadgetContainerMessage< IsmrmrdReconData >* m1)
@@ -586,7 +614,7 @@ void GenericReconSMSBase::get_header_and_position_and_gap(hoNDArray< std::comple
 
     for (s = 0; s < SLC; s++)
     {
-        z_offset_geo(s)=z_offset(indice_sb(s));
+        z_offset_geo[s]=z_offset[indice_sb[s]];
     }
 
     //std::cout << z_offset_geo << std::endl;
@@ -607,8 +635,8 @@ void GenericReconSMSBase::get_header_and_position_and_gap(hoNDArray< std::comple
     GDEBUG_STREAM("slice gap factor is "<<  slice_gap_factor<< " %" );
 
     //selection d'un jeux de données :
-    arma::ivec index(MB);
-    index.zeros();
+    std::vector<unsigned int> index(MB, 0);
+    //index.zeros();
 
     //index.print();
 
@@ -616,17 +644,17 @@ void GenericReconSMSBase::get_header_and_position_and_gap(hoNDArray< std::comple
 
     for (a = 0; a < 1; a++)
     {
-        MapSliceSMS.row(a).print();
-        index=MapSliceSMS.row(a).t();
+        //MapSliceSMS.row(a).print();
+        index=MapSliceSMS[a];//.row(a).t();
 
         for (m = 0; m < MB-1; m++)
         {
-            if (z_offset_geo(index(m+1))>z_offset_geo(index(m)))
+            if (z_offset_geo[index[m+1]]>z_offset_geo[index[m]])
             {
-                GDEBUG_STREAM("distance au centre de la coupe la proche: " <<z_offset_geo(index(m))) ;
-                GDEBUG_STREAM("distance entre les coupes simultanées: " <<  z_offset_geo(index(m+1))-z_offset_geo(index(m))) ;
+                GDEBUG_STREAM("distance au centre de la coupe la proche: " <<z_offset_geo(index[m])) ;
+                GDEBUG_STREAM("distance entre les coupes simultanées: " <<  z_offset_geo(index[m + 1])-z_offset_geo(index[m])) ;
 
-                z_gap(m)=z_offset_geo(index(m+1))-z_offset_geo(index(m));
+                z_gap(m)=z_offset_geo(index[m+1]-z_offset_geo(index[m]));
             }
         }
     }
@@ -678,12 +706,6 @@ void GenericReconSMSBase::save_8D_containers_as_4D_matrix_with_a_loop_along_the_
     size_t N = input.get_size(6);
     size_t S = input.get_size(7);
 
-    if ( E2> 1 || N> 1 || S> 1 )
-    {
-        GERROR_STREAM(" save_8D_containers_as_4D_matrix_with_a_loop_along_the_6th_dim_stk failed ... ");
-    }
-
-
     hoNDArray< std::complex<float> > output;
     output.create(RO, E1, CHA , MB);
 
@@ -691,7 +713,6 @@ void GenericReconSMSBase::save_8D_containers_as_4D_matrix_with_a_loop_along_the_
 
     for (a = 0; a < STK; a++)
     {
-        output.fill(0);
         std::stringstream stk;
         stk << "_stack_" << a;
 
@@ -724,6 +745,10 @@ void GenericReconSMSBase::save_4D_with_STK_5(hoNDArray< std::complex<float> >& i
     if ( X6> 1 || X7> 1  )
     {
         GERROR_STREAM(" save_4D_5D_data failed ... ");
+    }
+    else
+    {
+        //GDEBUG_STREAM(" saving 4D with STK_5 data soon ... ");
     }
 
     hoNDArray< std::complex<float> > output;
@@ -854,11 +879,11 @@ void GenericReconSMSBase::save_4D_8D_kspace(hoNDArray< std::complex<float> >& in
 
 
 
-arma::ivec GenericReconSMSBase::map_interleaved_acquisitions(int number_of_slices, bool no_reordering )
+std::vector<unsigned int> GenericReconSMSBase::map_interleaved_acquisitions(int number_of_slices, bool no_reordering )
 {
 
-    arma::ivec index(number_of_slices);
-    index.zeros();
+    std::vector<unsigned int> index(number_of_slices, 0);
+    //index.zeros();
 
 
     if(no_reordering)
@@ -867,7 +892,7 @@ arma::ivec GenericReconSMSBase::map_interleaved_acquisitions(int number_of_slice
 
         for (unsigned int i = 0; i < number_of_slices; i++)
         {
-            index(i)=i;
+            index[i]=i;
         }
     }
     else
@@ -876,28 +901,28 @@ arma::ivec GenericReconSMSBase::map_interleaved_acquisitions(int number_of_slice
 
         if (number_of_slices%2)
         {
-            index(0)=0;
+            index[0]=0;
             GDEBUG("Number of single band images is odd \n");
         }
         else
         {
-            index(0)=1;
+            index[0]=1;
             GDEBUG("Number of single band images is even \n");
         }
 
         for (unsigned int i = 1; i < number_of_slices; i++)
         {
-            index(i)=index(i-1)+2;
+            index[i]=index[i-1]+2;
 
-            if (index(i)>=number_of_slices)
+            if (index[i]>=number_of_slices)
             {
                 if (number_of_slices%2)
                 {
-                    index(i)=1;
+                    index[i]=1;
                 }
                 else
                 {
-                    index(i)=0;
+                    index[i]=0;
                 }
             }
         }
@@ -906,24 +931,24 @@ arma::ivec GenericReconSMSBase::map_interleaved_acquisitions(int number_of_slice
 }
 
 
-arma::imat GenericReconSMSBase::get_map_slice_single_band(int MB_factor, int lNumberOfStacks, arma::ivec order_of_acquisition_mb, bool no_reordering)
+std::vector< std::vector<unsigned int> > GenericReconSMSBase::get_map_slice_single_band(int MB_factor, int lNumberOfStacks, std::vector<unsigned int> order_of_acquisition_mb, bool no_reordering)
 {
-    arma::imat output(lNumberOfStacks, MB_factor);
-    output.zeros();
+    std::vector< std::vector<unsigned int> > output(lNumberOfStacks, std::vector<unsigned int>(MB_factor, 0));
+    //output.zeros();
 
     if (lNumberOfStacks==1)
     {
-        output=map_interleaved_acquisitions(MB_factor, no_reordering );
+        output[0]=map_interleaved_acquisitions(MB_factor, no_reordering );
     }
     else
     {
         for (unsigned int a = 0; a < lNumberOfStacks; a++)
         {
-            int count_map_slice=order_of_acquisition_mb(a);
+            int count_map_slice=order_of_acquisition_mb[a];
 
             for (unsigned int m = 0; m < MB_factor; m++)
             {
-                output(a,m) = count_map_slice;
+                output[a][m] = count_map_slice;
                 count_map_slice=count_map_slice+lNumberOfStacks;
             }
         }
@@ -1006,8 +1031,6 @@ void GenericReconSMSBase::load_epi_data()
         std::complex<float> * out_pos_no_exp = &(epi_nav_pos_no_exp_(0, s));
         memcpy(out_pos_no_exp, &corrpos_no_exp(0) , sizeof(std::complex<float>)*dimensions_[0]);
     }
-
-
 
     CheckComplexNumberEqualInMatrix(epi_nav_neg_,corrneg_all_ );
     CheckComplexNumberEqualInMatrix(epi_nav_neg_no_exp_,corrneg_all_no_exp_ );
@@ -1137,7 +1160,7 @@ void GenericReconSMSBase::compute_mean_epi_arma_nav(arma::cx_fcube &input,  arma
 
 
 
-void GenericReconSMSBase::reorganize_arma_nav(arma::cx_fmat &data, arma::uvec indice)
+void GenericReconSMSBase::reorganize_arma_nav(arma::cx_fmat &data, std::vector<unsigned int> indice)
 {
     size_t RO=size(data,0);
     size_t SLC=size(data,1);
@@ -1147,7 +1170,7 @@ void GenericReconSMSBase::reorganize_arma_nav(arma::cx_fmat &data, arma::uvec in
 
     for (int slc = 0; slc < SLC; slc++)
     {
-        new_data.col(slc)=data.col(indice(slc));
+        new_data.col(slc)=data.col(indice[slc]);
     }
 
     data = new_data;
@@ -1155,7 +1178,7 @@ void GenericReconSMSBase::reorganize_arma_nav(arma::cx_fmat &data, arma::uvec in
 }
 
 
-void GenericReconSMSBase::reorganize_nav(hoNDArray< std::complex<float> >& data, arma::uvec indice)
+void GenericReconSMSBase::reorganize_nav(hoNDArray< std::complex<float> >& data, std::vector<unsigned int> indice)
 {
     size_t RO=data.get_size(0);
     size_t SLC=data.get_size(1);
@@ -1165,7 +1188,7 @@ void GenericReconSMSBase::reorganize_nav(hoNDArray< std::complex<float> >& data,
 
     for (int slc = 0; slc < SLC; slc++) {
 
-        std::complex<float> * in = &(data(0, indice(slc)));
+        std::complex<float> * in = &(data(0, indice[slc]));
         std::complex<float> * out = &(new_data(0, slc));
         memcpy(out , in, sizeof(std::complex<float>)*RO);
     }
@@ -1193,7 +1216,7 @@ void GenericReconSMSBase::create_stacks_of_nav(hoNDArray< std::complex<float> >&
 
         for (m = 0; m < MB; m++) {
 
-            index = MapSliceSMS(a,m);
+            index = MapSliceSMS[a][m];
 
             std::complex<float> * in = &(data(0, index));
             std::complex<float> * out = &(new_stack(0, m, a));
@@ -1222,7 +1245,7 @@ void GenericReconSMSBase::create_stacks_of_arma_nav(arma::cx_fmat &data, arma::c
 
         for (m = 0; m < MB; m++) {
 
-            index = MapSliceSMS(a,m);
+            index = MapSliceSMS[a][m];
 
             new_stack.slice(a).col(m)=data.col(index);
 
@@ -1316,53 +1339,58 @@ void GenericReconSMSBase::prepare_epi_data(size_t e, size_t E1, size_t E2, size_
     tempo_1D_hoND.create(RO);
 
     // example
+    if (use_gpu.value()==true)
+    {
 
-    // memory allocation
-    //device_epi_nav_pos_STK_test.create(RO, MB_factor, lNumberOfStacks_);
-    device_epi_nav_neg_STK_test.create(RO, MB_factor, lNumberOfStacks_);
+        std::cout<< " coucou allocation GPU problem"<< std::endl;
 
-    device_epi_nav_pos_STK_mean_test.create(RO,  lNumberOfStacks_);
-    device_epi_nav_neg_STK_mean_test.create(RO,  lNumberOfStacks_);
+        // memory allocation
+        //device_epi_nav_pos_STK_test.create(RO, MB_factor, lNumberOfStacks_);
+        device_epi_nav_neg_STK_test.create(RO, MB_factor, lNumberOfStacks_);
 
-    device_epi_nav_pos_STK_test= reinterpret_cast< hoNDArray<float_complext> & >(epi_nav_pos_STK_);
+        device_epi_nav_pos_STK_mean_test.create(RO,  lNumberOfStacks_);
+        device_epi_nav_neg_STK_mean_test.create(RO,  lNumberOfStacks_);
 
-    // reintrepret
-    //  hoNDArray<float_complext>* host_epi_nav_pos_STK_ = reinterpret_cast< hoNDArray<float_complext>* >(&epi_nav_pos_STK_);
-    hoNDArray<float_complext>* host_epi_nav_neg_STK_ = reinterpret_cast< hoNDArray<float_complext>* >(&epi_nav_neg_STK_);
-    hoNDArray<float_complext>* host_epi_nav_pos_STK_mean_ = reinterpret_cast< hoNDArray<float_complext>* >(&epi_nav_pos_STK_mean_);
-    hoNDArray<float_complext>* host_epi_nav_neg_STK_mean_ = reinterpret_cast< hoNDArray<float_complext>* >(&epi_nav_neg_STK_mean_);
+        device_epi_nav_pos_STK_test= reinterpret_cast< hoNDArray<float_complext> & >(epi_nav_pos_STK_);
 
-    //cudaMemcpyHostToDevice
-    /*  if(cudaMemcpy(device_epi_nav_pos_STK_test.get_data_ptr(),
+        // reintrepret
+        //  hoNDArray<float_complext>* host_epi_nav_pos_STK_ = reinterpret_cast< hoNDArray<float_complext>* >(&epi_nav_pos_STK_);
+        hoNDArray<float_complext>* host_epi_nav_neg_STK_ = reinterpret_cast< hoNDArray<float_complext>* >(&epi_nav_neg_STK_);
+        hoNDArray<float_complext>* host_epi_nav_pos_STK_mean_ = reinterpret_cast< hoNDArray<float_complext>* >(&epi_nav_pos_STK_mean_);
+        hoNDArray<float_complext>* host_epi_nav_neg_STK_mean_ = reinterpret_cast< hoNDArray<float_complext>* >(&epi_nav_neg_STK_mean_);
+
+        //cudaMemcpyHostToDevice
+        /*  if(cudaMemcpy(device_epi_nav_pos_STK_test.get_data_ptr(),
                host_epi_nav_pos_STK_->get_data_ptr(),
                RO*MB_factor*lNumberOfStacks_*sizeof(std::complex<float>),
                cudaMemcpyHostToDevice)!= cudaSuccess )   {
             GERROR_STREAM("Upload to device for device_epi_nav_pos_STK_test failed\n");}*/
 
-    if(cudaMemcpy(device_epi_nav_neg_STK_test.get_data_ptr(),
-                  host_epi_nav_neg_STK_->get_data_ptr(),
-                  RO*MB_factor*lNumberOfStacks_*sizeof(std::complex<float>),
-                  cudaMemcpyHostToDevice)!= cudaSuccess )   {
-        GERROR_STREAM("Upload to device for device_epi_nav_pos_STK_test failed\n");}
+        if(cudaMemcpy(device_epi_nav_neg_STK_test.get_data_ptr(),
+                      host_epi_nav_neg_STK_->get_data_ptr(),
+                      RO*MB_factor*lNumberOfStacks_*sizeof(std::complex<float>),
+                      cudaMemcpyHostToDevice)!= cudaSuccess )   {
+            GERROR_STREAM("Upload to device for device_epi_nav_pos_STK_test failed\n");}
 
-    if(cudaMemcpy(device_epi_nav_neg_STK_mean_test.get_data_ptr(),
-                  host_epi_nav_neg_STK_mean_->get_data_ptr(),
-                  RO*lNumberOfStacks_*sizeof(std::complex<float>),
-                  cudaMemcpyHostToDevice)!= cudaSuccess )   {
-        GERROR_STREAM("Upload to device for device_epi_nav_pos_STK_test failed\n");}
+        if(cudaMemcpy(device_epi_nav_neg_STK_mean_test.get_data_ptr(),
+                      host_epi_nav_neg_STK_mean_->get_data_ptr(),
+                      RO*lNumberOfStacks_*sizeof(std::complex<float>),
+                      cudaMemcpyHostToDevice)!= cudaSuccess )   {
+            GERROR_STREAM("Upload to device for device_epi_nav_pos_STK_test failed\n");}
 
-    if(cudaMemcpy(device_epi_nav_pos_STK_mean_test.get_data_ptr(),
-                  host_epi_nav_pos_STK_mean_->get_data_ptr(),
-                  RO*lNumberOfStacks_*sizeof(std::complex<float>),
-                  cudaMemcpyHostToDevice)!= cudaSuccess )   {
-        GERROR_STREAM("Upload to device for device_epi_nav_pos_STK_test failed\n");}
-
-
-    cudaError_t err = cudaGetLastError();
-    if( err != cudaSuccess ){
-        GDEBUG("Unable to copy result from device to host: %s\n", cudaGetErrorString(err));}
+        if(cudaMemcpy(device_epi_nav_pos_STK_mean_test.get_data_ptr(),
+                      host_epi_nav_pos_STK_mean_->get_data_ptr(),
+                      RO*lNumberOfStacks_*sizeof(std::complex<float>),
+                      cudaMemcpyHostToDevice)!= cudaSuccess )   {
+            GERROR_STREAM("Upload to device for device_epi_nav_pos_STK_test failed\n");}
 
 
+        cudaError_t err = cudaGetLastError();
+        if( err != cudaSuccess ){
+            GDEBUG("Unable to copy result from device to host: %s\n", cudaGetErrorString(err));}
+        std::cout<< "coucou allocation fin"<< std::endl;
+
+    }
 
 }
 
@@ -1372,7 +1400,7 @@ void GenericReconSMSBase::define_usefull_parameters(IsmrmrdReconBit &recon_bit, 
 {
 
     size_t start_E1_SB(0), end_E1_SB(0);
-    auto t = Gadgetron::detect_sampled_region_E1(recon_bit.sb_->data_);
+    auto t = Gadgetron::detect_sampled_region_E1(recon_bit.data_.data_);
     start_E1_SB = std::get<0>(t);
     end_E1_SB = std::get<1>(t);
 
@@ -1386,7 +1414,7 @@ void GenericReconSMSBase::define_usefull_parameters(IsmrmrdReconBit &recon_bit, 
 
     SamplingLimit sampling_limits_SB[3], sampling_limits_MB[3];
     for (int i = 0; i < 3; i++)
-        sampling_limits_SB[i] = recon_bit.sb_->sampling_.sampling_limits_[i];
+        sampling_limits_SB[i] = recon_bit.data_.sampling_.sampling_limits_[i];
 
     for (int i = 0; i < 3; i++)
         sampling_limits_MB[i] = recon_bit.data_.sampling_.sampling_limits_[i];
@@ -1604,7 +1632,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK6_old(hoNDArray< std::c
     hoNDArray< std::complex<float> > phase_shift;
     phase_shift.create(RO, E1, E2, CHA);
 
-    hoNDFFT<float>::instance()->ifft(&data,0);
+    hoNDFFT<float>::instance()->ifft1c(data);
 
     // std::complex<float> signe(0,-1);
     // std::cout << " signe "<< signe <<std::endl;
@@ -1694,7 +1722,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK6_old(hoNDArray< std::c
         }
     }
 
-    hoNDFFT<float>::instance()->fft(&data,0);
+    hoNDFFT<float>::instance()->fft1c(data);
 }
 
 
@@ -1715,7 +1743,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_arma_STK6(hoNDArray< std::
 
     size_t m, a, e1, ro, e2, cha, n, s;
 
-    hoNDFFT<float>::instance()->ifft(&data,0);
+    hoNDFFT<float>::instance()->ifft1c(data);
 
     //size_t hE1 = headers_.get_size(0);
     //size_t hE2 = headers_.get_size(1);
@@ -1810,14 +1838,14 @@ void GenericReconSMSBase::apply_ghost_correction_with_arma_STK6(hoNDArray< std::
         }
     }
 
-    hoNDFFT<float>::instance()->fft(&data,0);
+    hoNDFFT<float>::instance()->fft1c(data);
 }
 
 
 //TODO à déplacer dans slice grappa
 void GenericReconSMSBase::do_fft_for_ref_scan(hoNDArray< std::complex<float> >& data)
 {
-    hoNDFFT<float>::instance()->fft(&data,0);
+    hoNDFFT<float>::instance()->fft1c(data);
 }
 
 
@@ -1838,7 +1866,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK6_open(hoNDArray< std::
 
     if (ifft==true)
     {
-        hoNDFFT<float>::instance()->ifft(&data,0);
+        hoNDFFT<float>::instance()->ifft1c(data);
     }
 
     /*****************************************/
@@ -1970,7 +1998,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK6_open(hoNDArray< std::
 
     //std::cout << " tempo_hoND ok --------------------------------------------------------------------------"<< std::endl;
 
-    hoNDFFT<float>::instance()->fft(&data,0);
+    hoNDFFT<float>::instance()->fft1c(data);
 }
 
 
@@ -2086,7 +2114,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK6(hoNDArray< std::compl
 
         //if (perform_timing.value()) { gt_timer_local_.start("cpuExample::ifft cpu time");}
 
-        hoNDFFT<float>::instance()->ifft(&data,0);
+        hoNDFFT<float>::instance()->ifft1c(data);
 
         //if (perform_timing.value()) { gt_timer_local_.stop();}
 
@@ -2230,7 +2258,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK6(hoNDArray< std::compl
 
     //if (perform_timing.value()) { gt_timer_local_.start("cpuExample::fft cpu time");}
 
-    hoNDFFT<float>::instance()->fft(&data,0);
+    hoNDFFT<float>::instance()->fft1c(data);
 
     //if (perform_timing.value()) { gt_timer_local_.stop();}
 
@@ -2263,7 +2291,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK7(hoNDArray< std::compl
     hoNDArray< std::complex<float> > phase_shift;
     phase_shift.create(RO, E1, E2, CHA);
 
-    hoNDFFT<float>::instance()->ifft(&data,0);
+    hoNDFFT<float>::instance()->ifft1c(data);
 
     // on suppose que les corrections EPI sont les mêmes pour tous les N et S
 
@@ -2322,7 +2350,7 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK7(hoNDArray< std::compl
         }
     }
 
-    hoNDFFT<float>::instance()->fft(&data,0);
+    hoNDFFT<float>::instance()->fft1c(data);
 }
 
 
@@ -2330,127 +2358,8 @@ void GenericReconSMSBase::apply_ghost_correction_with_STK7(hoNDArray< std::compl
 
 
 
-void GenericReconSMSBase::apply_absolute_phase_shift(hoNDArray< std::complex<float> >& data, bool is_positive, bool is_mb)
+void GenericReconSMSBase::apply_absolute_phase_shift(hoNDArray< std::complex<float> >& data, bool is_positive)
 {    
-
-    size_t RO=data.get_size(0);
-    size_t E1=data.get_size(1);
-    size_t E2=data.get_size(2);
-    size_t CHA=data.get_size(3);
-    size_t MB=data.get_size(4);
-    size_t STK=data.get_size(5);
-    size_t N=data.get_size(6);
-    size_t S=data.get_size(7);
-
-    //GADGET_CHECK_THROW(CHA==lNumberOfChannels_)
-    GADGET_CHECK_THROW(STK==lNumberOfStacks_);
-
-    long long m, a, n, s;
-    long long index;
-
-    std::complex<double> ii(0,1);
-
-    int facteur;
-
-    if (is_positive==true)
-    {facteur=-1;}
-    else
-    {facteur=1;}
-
-    for (a = 0; a < STK; a++) {
-
-        for (m = 0; m < MB; m++) {
-
-            index = MapSliceSMS(a,m);
-
-            //std::complex<double> lala =  exp(arma::datum::pi*facteur*ii*z_offset_geo(index)/z_gap(0));
-
-            std::complex<double> lala;
-            std::complex<float> lolo;
-
-            if (MB==3){
-
-                if (m==0)
-                {
-                    lala = exp(arma::datum::pi*2/1*facteur*ii);
-                    lolo = 1;
-                }
-                else if (m==1)
-                {
-                    if (is_positive==true)
-                    {
-                        lala= exp(arma::datum::pi*2/3*facteur*ii);
-
-                        if (is_mb==true)
-                        {
-                            //std::cout << "on passe ici "<< index << " " << z_offset_geo(index)<< " "<< z_gap(0)<< std::endl;
-                            lolo= 1; //exp(arma::datum::pi*-1*ii*z_offset_geo(index)/z_gap(0));
-                        }
-                        else
-                        {
-                            lolo=1;
-                        }
-                    }
-                    else
-                    {
-                        lala= exp(arma::datum::pi*2/3*facteur*ii);
-                        lolo=1;
-                    }
-                }
-                else if (m==2)
-                {
-                    if (is_positive==true)
-                    {
-                        lala= exp(arma::datum::pi*2/6*facteur*ii);
-
-                        if (is_mb==true)
-                        {
-                            lolo= 1; //exp(arma::datum::pi*-1*ii*z_offset_geo(index)/z_gap(0));
-                        }
-                        else
-                        {
-                            lolo=1;
-                        }
-                    }
-                    else
-                    {
-                        lala= exp(arma::datum::pi*2/6*facteur*ii);
-                        lolo=1;
-                    }
-
-                }
-            }
-            else
-            {
-
-                {    lala=  exp(arma::datum::pi*facteur*ii*z_offset_geo(index)/z_gap(0));
-                     lolo=1;
-                }
-            }
-
-
-
-            std::complex<float>  lili=  static_cast< std::complex<float> >(lala) ;
-
-            for (s = 0; s < S; s++)
-            {
-                for (n = 0; n < N; n++)
-                {
-                    std::complex<float> *in = &(data(0, 0, 0, 0, m, a, n, s));
-
-                    for (long long j = 0; j < RO * E1 * E2 * CHA; j++) {
-
-                        in[j] = in[j]*lili*lolo;
-                    }
-                }
-            }
-        }
-    }
-}
-
-/*
-void GenericReconSMSBase::apply_absolute_phase_shift_MB2(hoNDArray< std::complex<float> >& data, bool is_positive)
-{
 
     size_t RO=data.get_size(0);
     size_t E1=data.get_size(1);
@@ -2482,7 +2391,7 @@ void GenericReconSMSBase::apply_absolute_phase_shift_MB2(hoNDArray< std::complex
 
         for (m = 0; m < MB; m++) {
 
-            index = MapSliceSMS(a,m);
+            index = MapSliceSMS[a][m];
 
             std::complex<double> lala=  exp(arma::datum::pi*facteur*ii*z_offset_geo(index)/z_gap(0));
             std::complex<float>  lili=  static_cast< std::complex<float> >(lala) ;
@@ -2502,7 +2411,6 @@ void GenericReconSMSBase::apply_absolute_phase_shift_MB2(hoNDArray< std::complex
         }
     }
 }
-*/
 
 GADGET_FACTORY_DECLARE(GenericReconSMSBase)
 }

@@ -25,7 +25,15 @@
     <!-- Noise prewhitening -->
     <gadget><name>NoiseAdjust</name><dll>gadgetron_mricore</dll><classname>NoiseAdjustGadget</classname></gadget>
 
-     <!-- EPI correction -->
+    <gadget>
+        <name>GiveReadoutInformationGadget</name>
+        <dll>gadgetron_smscore</dll>
+        <classname>GiveReadoutInformationGadget</classname>
+    </gadget>
+
+
+
+   <!-- EPI correction -->
     <gadget>
         <name>ReconX</name>
         <dll>gadgetron_epi</dll>
@@ -49,6 +57,8 @@
         <dll>gadgetron_epi</dll>
         <classname>OneEncodingGadget</classname>
     </gadget>
+
+
 
     <!-- Data accumulation and trigger gadget -->
     <gadget>
@@ -110,18 +120,18 @@
     </gadget>
 
     <!-- Recon -->
-   <!--  <gadget>
+    <!--<gadget>
         <name>Recon</name>
         <dll>gadgetron_mricore</dll>
         <classname>GenericReconCartesianFFTGadget</classname>
 
-
+      
         <property><name>image_series</name><value>0</value></property>
 
-
+        
         <property><name>coil_map_algorithm</name><value>Inati</value></property>
 
-        <
+       
         <property><name>debug_folder</name><value></value></property>
         <property><name>perform_timing</name><value>true</value></property>
         <property><name>verbose</name><value>true</value></property>
@@ -142,33 +152,9 @@
       <dll>gadgetron_python</dll>
       <classname>PythonGadget</classname>
       <property><name>python_path</name>                  <value>/home/myuser/scripts/python</value></property>
-      <property><name>python_module</name>                <value>bucket_recon_fft</value></property>
-      <property><name>python_class</name>                <value>BucketReconFFT</value></property>
+      <property><name>python_module</name>                <value>bucket_recon</value></property>
+      <property><name>python_class</name>                <value>BucketRecon</value></property>
     </gadget>
-
-
-  <!--
-    <gadget>
-        <name>PythonImageArray</name>
-        <dll>gadgetron_python</dll>
-        <classname>PythonGadget</classname>
-        <property><name>python_module</name><value>image_array_recon</value></property>
-        <property><name>python_class</name><value>ImageArrayRecon</value></property>
-    </gadget>
--->
-
-
-  
-    <gadget>
-        <name>RMSCoilCombineWithPhase</name>
-        <dll>gadgetron_python</dll>
-        <classname>PythonGadget</classname>
-        <property><name>python_path</name><value>/home/valery/Dev/gadgetron-sms_save/gadgets/python/gadgets/</value></property>
-        <property><name>python_module</name><value>rms_coil_combine_with_phase</value></property>
-        <property><name>python_class</name><value>RMSCoilCombineWithPhase</value></property>
-    </gadget>
-
-
 
 
     <!-- Partial fourier handling -->
@@ -258,33 +244,11 @@
     </gadget>
 
     <!-- after recon processing -->
-   <!--  <gadget>
+    <gadget>
         <name>ComplexToFloatAttrib</name>
         <dll>gadgetron_mricore</dll>
         <classname>ComplexToFloatGadget</classname>
-    </gadget> -->
-
-<!-- <gadget>
-     <name>ExtractGadget</name>
-     <dll>gadgetron_mricore</dll>
-     <classname>ExtractGadget</classname>
-     <property><name>extract_magnitude</name><value>true</value></property>
-     <property><name>extract_phase</name><value>true</value></property>
- </gadget>-->
-
-<gadget>
-      <name>ExtractThermoI</name>
-      <dll>gadgetron_mricore</dll>
-      <classname>ExtractThermoIGadget</classname>
-      <property>
-          <name>doOffline</name>
-          <value>1</value>
-      </property>
-      <property>
-          <name>extract_mask</name>
-          <value>9</value>
-      </property>
-</gadget>
+    </gadget>
 
     <gadget>
         <name>FloatToShortAttrib</name>

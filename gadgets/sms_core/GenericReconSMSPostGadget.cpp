@@ -172,7 +172,7 @@ void GenericReconSMSPostGadget::post_process_sb_data(hoNDArray< std::complex<flo
     os << "_encoding_" << e;
     std::string suffix = os.str();
 
-    undo_blip_caipi_shift(data_8D, headers, e, true, false, true);
+    undo_blip_caipi_shift(data_8D, headers, e, true);
 
     if (!debug_folder_full_path_.empty())
     {
@@ -284,16 +284,7 @@ void GenericReconSMSPostGadget::post_process_mb_data(hoNDArray< std::complex<flo
     os << "_encoding_" << e;
     std::string suffix = os.str();
 
-    if (MB_factor==2)
-    {
-        undo_blip_caipi_shift(data_8D, headers, e, false, true, false);
-    }
-    else if (MB_factor==3)
-    {
-        undo_blip_caipi_shift(data_8D, headers, e, true, true, false);
-
-    }
-
+    undo_blip_caipi_shift(data_8D, headers, e, false);
 
     if (!debug_folder_full_path_.empty())
     {
@@ -380,7 +371,7 @@ void GenericReconSMSPostGadget::set_idx(hoNDArray< ISMRMRD::AcquisitionHeader > 
 
 
 
-void GenericReconSMSPostGadget::undo_blip_caipi_shift(hoNDArray< std::complex<float> >& data, hoNDArray< ISMRMRD::AcquisitionHeader > & headers, size_t e, bool undo_absolute, bool is_mb, bool compute_header)
+void GenericReconSMSPostGadget::undo_blip_caipi_shift(hoNDArray< std::complex<float> >& data, hoNDArray< ISMRMRD::AcquisitionHeader > & headers, size_t e, bool undo_absolute)
 {
     std::stringstream os;
     os << "_encoding_" << e;
@@ -393,40 +384,15 @@ void GenericReconSMSPostGadget::undo_blip_caipi_shift(hoNDArray< std::complex<fl
         if (undo_absolute==true)
         {
             // true means single band data
-            if (compute_header==true)
-            {
-               get_header_and_position_and_gap(data, headers);
-            }
+            get_header_and_position_and_gap(data, headers);
+            apply_absolute_phase_shift(data, true);
 
-            if (MB_factor==2)
-            {
-            apply_absolute_phase_shift(data, true, is_mb);
-            }
-            else if (MB_factor==3)
-            {
-            apply_absolute_phase_shift(data, true, is_mb);
-            }
-
-            if (MB_factor==2)
-            {
-                apply_relative_phase_shift(data, true);
-            }
-            else if (MB_factor==3)
-            {
-                apply_relative_phase_shift(data, false);
-            }
+            apply_relative_phase_shift(data, true);
         }
         else
         {
             // false means multiband data
-            if (MB_factor==2)
-            {
-                apply_relative_phase_shift_test(data, true);
-            }
-            else if (MB_factor==3)
-            {
-                apply_relative_phase_shift_test(data, false);
-            }
+            apply_relative_phase_shift_test(data, true);
         }
 
 
